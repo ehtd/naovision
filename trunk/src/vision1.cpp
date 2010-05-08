@@ -178,10 +178,10 @@ void vision1::getImage(){
 
 }
 
-void vision1::saveImage(){
+void vision1::saveImage(const std::string& path){
 	try {
 		const int seconds = (int)(imageIn->fTimeStamp/1000000LL);
-		const std::string kImageNameFull = "/home/nao/fotos/foto" + DecToString(seconds) + ".jpg";
+		const std::string kImageNameFull = path + DecToString(seconds) + ".jpg";
 		cvSaveImage(kImageNameFull.c_str(), img);
 		//		 detectBall(img);
 		fLogProxy->info(getName(), "Image saved as foto.jpg");
@@ -227,14 +227,14 @@ void vision1::releaseImage(){
 	cvReleaseImage(&img);
 }
 
-void vision1::takePicture(){
+void vision1::takePicture(const std::string& path){
 	init();
 	fLogProxy->info(getName(), "registerToVIM");
 	registerToVIM(AL::kQQVGA, AL::kRGBColorSpace);
 	fLogProxy->info(getName(), "getImage");
 	getImage();
 	fLogProxy->info(getName(), "saveImage");
-	saveImage();
+	saveImage(path);
 	//	detectBall(img);
 	fLogProxy->info(getName(), "releaseImage");
 	releaseImage();

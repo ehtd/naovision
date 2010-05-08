@@ -54,11 +54,11 @@ public:
 
 	void getImage();
 
-	void saveImage();
+	void saveImage(const std::string& );
 
 	void releaseImage();
 
-	void takePicture();
+	void takePicture(const std::string& );
 
 	void init();
 
