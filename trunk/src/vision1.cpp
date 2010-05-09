@@ -279,7 +279,7 @@ void vision1::detectBall(){
 	for( int y=0; y<img->height; y++ ) {
 		uchar* ptr = (uchar*) (img->imageData + y * img->widthStep);
 		for( int x=0; x<img->width; x++ ) {
-			if (ptr [3*x+0]< 60 ){
+			if (ptr [3*x+0]< 60 and ptr [3*x+0]> 15 and ptr [3*x+1]> 90){
 				ptr[3*x+0] = 30;
 				ptr[3*x+1] = 255;
 				ptr[3*x+2] = 255;
