@@ -25,7 +25,7 @@ else:
   from naoqi import ALBehavior
   from vision_definitions import*
 
-IP = "192.168.1.106"
+IP = "0.0.0.0"
 PORT = 9559
 
 #________________________________
@@ -46,10 +46,10 @@ except Exception,e:
 #vision1_Proxy.registerToVIM(kQQVGA, kRGBColorSpace)
 
 print "takePicture"
-vision1_Proxy.takePicture("/home/nao/fotos/original")
+vision1_Proxy.takePicture("/home/ehtd/fotos/original")
 
 print "takePicture"
-vision1_Proxy.processBall("/home/nao/fotos/processed")
+vision1_Proxy.processBall("/home/ehtd/fotos/processed")
 
 #print "write"
 #vision1_Proxy.write()
