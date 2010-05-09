@@ -21,7 +21,16 @@
 #include "opencv/highgui.h"
 #include "opencv/cv.h"
 
+struct Object{
+       int Rmin;
+       int Gmin;
+       int Bmin;
+       int Rmax;
+       int Gmax;
+       int Bmax;
+    };
 
+static const Object BALL = {20,100,100,170,150,220};
 
 namespace AL
 {
@@ -55,6 +64,16 @@ public:
 	void getImage();
 
 	void saveImage(const std::string& );
+
+	void saveImage(const std::string& , IplImage* );
+
+	void processBall(const std::string& );
+
+	//IplImage* detectBall();
+
+	void detectBall();
+
+	void findColor();
 
 	void releaseImage();
 
