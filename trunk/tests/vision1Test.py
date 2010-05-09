@@ -46,7 +46,10 @@ except Exception,e:
 #vision1_Proxy.registerToVIM(kQQVGA, kRGBColorSpace)
 
 print "takePicture"
-vision1_Proxy.takePicture("/home/nao/fotos/picture")
+vision1_Proxy.takePicture("/home/nao/fotos/original")
+
+print "takePicture"
+vision1_Proxy.processBall("/home/nao/fotos/processed")
 
 #print "write"
 #vision1_Proxy.write()

@@ -44,6 +44,10 @@ img(NULL)
 	addParam( "imgName", "Image name" );
 	BIND_METHOD( vision1::init );
 
+	functionName( "processBall", "vision1" ,  "Takes a picture finds ball and saves it." );
+	addParam( "imgName", "Image name" );
+	BIND_METHOD( vision1::processBall );
+
 }
 
 //______________________________________________
@@ -192,6 +196,20 @@ void vision1::saveImage(const std::string& path){
 	}
 }
 
+void vision1::saveImage(const std::string& path, IplImage* imagen){
+	try {
+		const int seconds = (int)(imageIn->fTimeStamp/1000000LL);
+		const std::string kImageNameFull = path + DecToString(seconds) + ".jpg";
+		cvSaveImage(kImageNameFull.c_str(), imagen);
+		//		 detectBall(img);
+		fLogProxy->info(getName(), "Image saved as foto.jpg");
+	}
+	catch(...) {
+		throw AL::ALError(getName(), "saveIplImage()", "OpenCV can't save the image with "
+				"this format.");
+	}
+}
+
 void vision1::write(){
 	FILE *pFile;
 	char buffer[] = {'x','y','z'};
@@ -230,17 +248,72 @@ void vision1::releaseImage(){
 void vision1::takePicture(const std::string& path){
 	init();
 	fLogProxy->info(getName(), "registerToVIM");
-	registerToVIM(AL::kQQVGA, AL::kRGBColorSpace);
+	registerToVIM(AL::kVGA, AL::kRGBColorSpace);
 	fLogProxy->info(getName(), "getImage");
 	getImage();
 	fLogProxy->info(getName(), "saveImage");
 	saveImage(path);
-	//	detectBall(img);
 	fLogProxy->info(getName(), "releaseImage");
 	releaseImage();
 	fLogProxy->info(getName(), "unRegisterFromVIM");
 	unRegisterFromVIM();
 }
+
+void vision1::processBall(const std::string& path){
+	init();
+	fLogProxy->info(getName(), "registerToVIM");
+	registerToVIM(AL::kVGA, AL::kHSYColorSpace);
+	fLogProxy->info(getName(), "getImage");
+	getImage();
+	fLogProxy->info(getName(), "detectBall");
+	detectBall();
+	fLogProxy->info(getName(), "saveImage");
+	saveImage(path);
+	fLogProxy->info(getName(), "releaseImage");
+	releaseImage();
+	fLogProxy->info(getName(), "unRegisterFromVIM");
+	unRegisterFromVIM();
+}
+
+void vision1::detectBall(){
+	for( int y=0; y<img->height; y++ ) {
+		uchar* ptr = (uchar*) (img->imageData + y * img->widthStep);
+		for( int x=0; x<img->width; x++ ) {
+			if (ptr [3*x+0]< 60 ){
+				ptr[3*x+0] = 30;
+				ptr[3*x+1] = 255;
+				ptr[3*x+2] = 255;
+			}
+			else{
+				ptr[3*x+0] = 0;
+				ptr[3*x+1] = 0;
+				ptr[3*x+2] = 0;
+			}
+		}
+	}
+}
+
+
+//IplImage* vision1::detectBall(){
+//	IplImage* dst = cvCreateImage(cvSize(img->width, img->height), img->depth, img->nChannels); //se crea la imagen destino
+//	//cvPyrMeanShiftFiltering(frame,segmented,10,70);
+//	CvMemStorage* storage = cvCreateMemStorage(0);//se  tiene q hacer para usar el metodo de segmentacion
+//	CvSeq* comp = NULL; //se usa en el metodo de segmentacion
+//	cvPyrSegmentation(img,dst,storage,&comp,4,150,30); //funcion que segmenta la imagen img y la guarda en dst
+////	int n_comp = comp->total; //el total de regiones que hay en la imagen
+///*	for( int i=0; i<n_comp; i++ ) {//para cada region ejecuta lo siguiente
+//		CvConnectedComp* cc = (CvConnectedComp*) cvGetSeqElem( comp, i );//obtiene la region i
+//		//verifica que el color promedio de la región (RGB) sea como naranja
+//		if (cc->value.val[0] < 100 && cc->value.val[0] > 20 && cc->value.val[1] > 100 && cc->value.val[1] < 170 && cc->value.val[2] > 150 && cc->value.val[2] < 220){
+//			CvPoint pt1 = cvPoint(cc->rect.x,cc->rect.y); //obtiene el punto superior izquierdo del bounding box de la region
+//			CvPoint pt2 = cvPoint(cc->rect.x+cc->rect.width,cc->rect.y+cc->rect.height); //obtiene el punto inferior izq del bounding box de la region
+//			cvRectangle(dst,pt1,pt2,CV_RGB(255,0,0)); //dibuja el bounding box de la region
+//			//printf("%f - %f %f %f \n",cc->area,cc->value.val[0],cc->value.val[1],cc->value.val[2]);
+//		}
+//	}*/
+//	cvReleaseMemStorage( &storage );
+//	return dst;
+//}
 
 /**
  * dummy Function
