@@ -270,6 +270,10 @@ void vision1::processBall(const std::string& path){
 	getImage();
 	fLogProxy->info(getName(), "detectBall");
 	detectBall();
+	fLogProxy->info(getName(), "Erode");
+	erode();
+	fLogProxy->info(getName(), "Dilate");
+	dilate();
 	fLogProxy->info(getName(), "getBallInfo");
 	getBallInfo();
 	fLogProxy->info(getName(), "saveImage");
@@ -284,7 +288,7 @@ void vision1::detectBall(){
 	for( int y=0; y<img->height; y++ ) {
 		uchar* ptr = (uchar*) (img->imageData + y * img->widthStep);
 		for( int x=0; x<img->width; x++ ) {
-			if (ptr [3*x+0]< 60 and ptr [3*x+0]> 15 and ptr [3*x+1]> 90){
+			if (ptr [3*x+0]< 70 and ptr [3*x+0]> 10 and ptr [3*x+1]> 70){
 				ptr[3*x+0] = 30;
 				ptr[3*x+1] = 255;
 				ptr[3*x+2] = 255;
@@ -304,11 +308,21 @@ double vision1::M(int p, int q, int id)
 	double momento = 0;
 	int num = 0;
 
+
+	//FILE *output;
+
+   //output = fopen("/home/ehtd/fotos/dump","w");
+
+
 	for( int y=0; y<img->height; y++ ) {
 		uchar* ptr = (uchar*) (img->imageData + y * img->widthStep);
+//		   fprintf(output,"\n");
 		for( int x=0; x<img->width; x++ ) {
-			if (ptr[3*x+0] == id )
+			if (ptr[3*x+0] > 0/*id*/ )
 			{
+				//fLogProxy->info(getName(), "inside M");
+				//fprintf(output,"%c :",&ptr[3*x+0]);
+				//std::cout << "H: " << &ptr[3*x+0];
 				num = 1;
 			}
 			else { num = 0; }
@@ -316,23 +330,45 @@ double vision1::M(int p, int q, int id)
 			momento += pow(x, p) * pow(y, q) * num;
 		}
 	}
+
+   //fclose(output);
 	return momento;
 }
 
+void vision1::erode(){
+
+	IplImage* dst = cvCreateImage(cvSize(img->width, img->height), img->depth, img->nChannels);
+
+	cvErode( img,dst, NULL, 4);
+//deallocate old img?
+	img = dst;
+}
+
+void vision1::dilate(){
+
+	IplImage* dst = cvCreateImage(cvSize(img->width, img->height), img->depth, img->nChannels);
+
+	cvDilate( img, dst, NULL, 4);
+
+//deallocate old img?
+	img = dst;
+}
+
+
+
 void vision1::getBallInfo(){
 	ball_area = M(0,0,30);
-	ball_centroid_x= (M(1,0,30)/ball_area);
-	ball_centroid_y= (M(0,1,30)/ball_area);
 
+	if( ball_area > 0){
+		ball_centroid_x= (M(1,0,30)/ball_area);
+		ball_centroid_y= (M(0,1,30)/ball_area);
+	}
 	std::cout << "Area: " << ball_area << std::endl;
 	std::cout << "x : " << ball_centroid_x << std::endl;
 	std::cout << "y : " << ball_centroid_y << std::endl;
 
 	uchar* ptr = (uchar*) (img->imageData + (int)ball_centroid_y * img->widthStep);
 	ptr[3*(int)(ball_centroid_x)+0] = 0;
-
-
-
 }
 
 /**
