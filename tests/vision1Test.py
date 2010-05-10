@@ -28,6 +28,9 @@ else:
 IP = "192.168.1.106"
 PORT = 9559
 
+imgPathOriginal="/home/nao/fotos/original"
+imgPathProcessed="/home/nao/fotos/processed"
+
 #________________________________
 # Generic Proxy creation 
 #________________________________
@@ -45,11 +48,25 @@ except Exception,e:
 #print "Registering to VIM"
 #vision1_Proxy.registerToVIM(kQQVGA, kRGBColorSpace)
 
-print "takePicture"
-vision1_Proxy.takePicture("/home/nao/fotos/original")
+#print "takePicture"
+#vision1_Proxy.takePicture(imgPathOriginal)
 
-print "takePicture"
-vision1_Proxy.processBall("/home/nao/fotos/processed")
+
+print "Stiffness On"
+vision1_Proxy.stiffnessOn()
+
+i=0
+
+while 1:
+
+	print "Processing Image"
+	vision1_Proxy.processBall(imgPathProcessed)
+
+#vision1_Proxy.saveData("/home/nao/fotos/dump.txt")
+
+
+print "Stiffness Off"
+vision1_Proxy.stiffnessOff()
 
 #print "write"
 #vision1_Proxy.write()
