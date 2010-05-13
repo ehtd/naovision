@@ -17,10 +17,13 @@
 #include "alloggerproxy.h"
 #include "almotionproxy.h"
 #include "alptr.h"
-#include <string>
 #include "alvision/alimage.h"
 #include "opencv/highgui.h"
 #include "opencv/cv.h"
+#include <vector>
+#include <string>
+
+using std::vector;
 
 struct Object{
        int Rmin;
@@ -74,7 +77,7 @@ public:
 
 	//IplImage* detectBall();
 
-	void detectBall();
+	void binarizar();
 
 	void findColor();
 
@@ -84,7 +87,7 @@ public:
 
 	void init();
 
-	void write();
+	void printImage(IplImage* , const std::string& );
 
 	double M(int p, int q, int id);
 
@@ -104,6 +107,11 @@ public:
 
     void initPos();
 
+    void segmentacion(IplImage*,vector<vector<int> >& );
+
+    void printLut(vector<vector<int> >, const std::string& );
+
+    void makeConcistent(vector<vector<int> >, IplImage* );
 
 	//    void detectBall(IplImage* img1);
 	/**
@@ -113,6 +121,8 @@ public:
 	 * @return an alvalue\n
 	 */
 	AL::ALValue dummyFunction(const std::string& pMsg, const AL::ALValue& pFoo );
+
+
 
 private:
 
@@ -134,6 +144,8 @@ private:
 	// Just a IplImage header to wrap around our camera image buffer.
 	// This object doesn't own the image buffer.
 	IplImage* img;
+	IplImage* pelota;
+	IplImage* porteria;
 
 	AL::ALImage* imageIn;
 
@@ -143,6 +155,10 @@ private:
 	double ball_centroid_y;
 
     double ballDirectionAngle,ballElevationAngle,fov,vfov,cameraAngle;
+
+    vector<vector<int> > lutPelota;
+    vector<vector<int> > lutPorteria;
+
 };
 
 #endif  // NAOVISION_VISION1_H
