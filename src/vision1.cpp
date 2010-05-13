@@ -29,6 +29,8 @@ vision1::vision1(AL::ALPtr<AL::ALBroker> broker, const std::string& name ):
 AL::ALModule(broker, name ),
 fRegisteredToVim(false),
 img(NULL),
+pelota(NULL),
+porteria(NULL),
 ball_area(0),
 ball_centroid_x(0),
 ball_centroid_y(0)
@@ -83,6 +85,11 @@ vision1::~vision1()
 	// Release Image Header if client code forgot to call unregisterFromVim.
 	if (img)
 		cvReleaseImage(&img);
+	if (pelota)
+		cvReleaseImage(&pelota);
+	if (porteria)
+		cvReleaseImage(&porteria);
+	lutPelota.clear();
 }
 
 void vision1::init() {
@@ -257,12 +264,20 @@ void vision1::saveImage(const std::string& path, IplImage* imagen){
 	}
 }
 
-void vision1::write(){
-	FILE *pFile;
-	char buffer[] = {'x','y','z'};
-	pFile = fopen ("myfile.bin","wb");
-	fwrite(buffer ,1, sizeof(buffer),pFile);
-	fclose(pFile);
+void vision1::printImage(IplImage* imagen, const std::string& path){
+	FILE *output;
+   const char* fileName = path.c_str();
+   output = fopen(fileName,"w");
+
+	for( int y=0; y<imagen->height; y++ ) {
+		uchar* ptr = (uchar*) (imagen->imageData + y * imagen->widthStep);
+		for( int x=0; x<imagen->width; x++ ) {
+	         fprintf(output,"%d ",ptr[x]);
+		}
+		   fprintf(output,"\n");
+	}
+
+   fclose(output);
 }
 
 
@@ -295,7 +310,7 @@ void vision1::releaseImage(){
 void vision1::takePicture(const std::string& path){
 	init();
 	fLogProxy->info(getName(), "registerToVIM");
-	registerToVIM(AL::kVGA, AL::kRGBColorSpace);
+	registerToVIM(AL::kVGA, AL::kBGRColorSpace);
 	fLogProxy->info(getName(), "getImage");
 	getImage();
 	fLogProxy->info(getName(), "saveImage");
@@ -309,19 +324,28 @@ void vision1::takePicture(const std::string& path){
 void vision1::processBall(const std::string& path){
 	init();
 	fLogProxy->info(getName(), "registerToVIM");
-	registerToVIM(AL::kQQVGA, AL::kHSYColorSpace);
+	registerToVIM(AL::kVGA, AL::kHSYColorSpace);
 	fLogProxy->info(getName(), "getImage");
 	getImage();
 	fLogProxy->info(getName(), "detectBall");
-	detectBall();
+	binarizar();
 	fLogProxy->info(getName(), "Erode");
 	erode();
 	fLogProxy->info(getName(), "Dilate");
 	dilate();
+	//fLogProxy->info(getName(), "printInText");
+	//printImage(pelota, "/home/ehtd/fotos/pelota.txt");
+	//printImage(porteria, "/home/ehtd/fotos/porteria.txt");
+	fLogProxy->info(getName(), "segmentacion");
+	segmentacion(pelota, lutPelota);
+	fLogProxy->info(getName(), "printInText");
+	printImage(pelota, "/home/ehtd/fotos/pelota.txt");
+	fLogProxy->info(getName(), "LUT");
+	printLut(lutPelota,"/home/ehtd/fotos/lut.txt");
 	fLogProxy->info(getName(), "getBallInfo");
 	getBallInfo();
-	fLogProxy->info(getName(), "trackBall");
-	trackBall();
+	//fLogProxy->info(getName(), "trackBall");
+	//trackBall();
 	fLogProxy->info(getName(), "saveImage");
 	saveImage(path);
 	fLogProxy->info(getName(), "releaseImage");
@@ -332,16 +356,42 @@ void vision1::processBall(const std::string& path){
 
 
 
-void vision1::detectBall(){
+void vision1::binarizar(){
+
+	pelota = cvCreateImage(cvSize(img->width, img->height), img->depth, 1);
+	porteria = cvCreateImage(cvSize(img->width, img->height), img->depth, 1);
+	//TODO:poner el pasto si es necesario
+	//IplImage* dst = cvCreateImage(cvSize(img->width, img->height), img->depth, 1);
+
 	for( int y=0; y<img->height; y++ ) {
 		uchar* ptr = (uchar*) (img->imageData + y * img->widthStep);
+		uchar* ptrPelota = (uchar*) (pelota->imageData + y * pelota->widthStep);
+		uchar* ptrPorteria = (uchar*) (porteria->imageData + y * porteria->widthStep);
+
 		for( int x=0; x<img->width; x++ ) {
-			if (ptr [3*x+0]< 70 and ptr [3*x+0]> 10 /*and ptr [3*x+1]> 70*/){
+			if (ptr [3*x+0]< 50 and ptr [3*x+0]> 15 and ptr [3*x+1]> 90){
+
+				ptrPelota[x]=1;
+
 				ptr[3*x+0] = 30;
-				ptr[3*x+1] = 255;
+				ptr[3*x+1] = 50;
 				ptr[3*x+2] = 255;
 			}
-			else{
+			else if (ptr [3*x+0]< 200 and ptr [3*x+0]> 150) {
+
+				ptrPorteria[x]=1;
+
+				ptr[3*x+0] = 200;
+				ptr[3*x+1] = 50;
+				ptr[3*x+2] = 50;
+			} else if (ptr [3*x+0]< 130 and ptr [3*x+0]> 80){
+				ptr[3*x+0] = 80;
+				ptr[3*x+1] = 255;
+				ptr[3*x+2] = 50;
+			} else {
+				ptrPelota[x]=0;
+				ptrPorteria[x]=0;
+
 				ptr[3*x+0] = 0;
 				ptr[3*x+1] = 0;
 				ptr[3*x+2] = 0;
@@ -350,6 +400,103 @@ void vision1::detectBall(){
 	}
 }
 
+void vision1::segmentacion(IplImage* imagen, vector<vector<int> >& lut){
+	int c = 2;
+	for( int y=0; y<imagen->height; y++ ) {
+		uchar* ptr = (uchar*) (imagen->imageData + y * imagen->widthStep);
+		uchar* ptrOld = NULL;
+		if (y !=0){
+			ptrOld = (uchar*) (imagen->imageData + (y - 1) * imagen->widthStep);
+		}
+		for( int x=0; x<imagen->width; x++ ) {
+			if (ptr [x]== 0){
+				continue;
+			}else{
+				if (ptrOld == NULL && x == 0){
+					//asignar color
+					ptr[x] = c;
+					continue;
+				}
+				if (x == 0){//no validar los vecinos izquierdos NULLPointerException
+					if (ptrOld[x] == 0){//Pi=color, Ps=0
+						ptr[x] = c;
+					}
+					if (ptrOld[x] != 0){//Pi=0, Ps=color
+						ptr[x] = ptrOld[x];
+					}
+					continue;
+				}
+				if (ptrOld == NULL){//no validar los vecinos superiores NULLPointerException
+					if (ptr[x-1] == 0){//Pi=color, Ps=0
+						ptr[x] = c;
+					}
+					if (ptr[x-1] != 0){//Pi=0, Ps=color
+						ptr[x] = ptr[x-1];
+					}
+					continue;
+				}
+				//Si estamos en cualquier otro lugar de la imagen
+				if (ptr[x-1] != 0 && ptrOld[x] == 0){//Pi=color, Ps=0
+					ptr[x] = ptr[x-1];
+				}
+				if (ptr[x-1] == 0 && ptrOld[x] != 0){//Pi=0, Ps=color
+					ptr[x]=ptrOld[x];
+				}
+				if (ptr[x-1] != 0 && ptrOld[x] != 0){//Pi=color, Ps=color
+					//si son colores iguales, elegir uno de ellos
+					if (ptr[x-1] == ptrOld[x]){
+						ptr[x] = ptr[x-1];
+					} else{//si son diferentes, poner como equivalencia
+						ptr[x] = ptr[x-1];
+						//método para unir ambas áreas, a ser llamado al finalizar la segmentación
+						std::vector<int> equivalentes;
+						//equivalentes.push_back(c);
+						equivalentes.push_back(ptrOld[x]);//poner primer color
+						equivalentes.push_back(ptr[x-1]);//poner segundo color
+
+						bool exists = false;
+						vector<int> c1;
+						for (int i = 0;i<(int)lut.size();i++){
+							c1 = lut.at(i);
+							if (c1 == equivalentes){
+								exists = true;
+							}
+						}
+
+						if(!exists){
+						lut.push_back(equivalentes);//poner vector en la lut
+						}
+					}
+				}
+				if (ptr[x-1] == 0 && ptrOld[x] == 0){//Pi=0, Ps=0
+					c++;
+					ptr[x] = c;
+				}
+
+			}
+		}
+	}
+}
+
+void vision1::printLut(vector<vector<int> >lut,const std::string& path){
+	FILE *output;
+   const char* fileName = path.c_str();
+   output = fopen(fileName,"w");
+
+	for (int i = 0; i < lut.size(); i++){
+		vector<int> row = lut.at(i);
+		for (int j = 0; j<row.size(); j++){
+			int element = row.at(j);
+			fprintf(output,"%d, ",element);
+		}
+		fprintf(output,"\n");
+	}
+}
+
+void vision1::makeConcistent(vector<vector<int> >lut, IplImage* imagen){
+
+
+}
 
 double vision1::M(int p, int q, int id)
 {
@@ -359,7 +506,7 @@ double vision1::M(int p, int q, int id)
 	for( int y=0; y<img->height; y++ ) {
 		uchar* ptr = (uchar*) (img->imageData + y * img->widthStep);
 		for( int x=0; x<img->width; x++ ) {
-			if (ptr[3*x+0] > 0/*id*/ )
+			if (ptr[3*x+0] == id )
 			{
 				num = 1;
 			}
@@ -374,19 +521,16 @@ double vision1::M(int p, int q, int id)
 void vision1::erode(){
 
 	IplImage* dst = cvCreateImage(cvSize(img->width, img->height), img->depth, img->nChannels);
-
 	cvErode( img,dst, NULL, 4);
-//deallocate old img?
+	cvReleaseImage(&img);
 	img = dst;
 }
 
 void vision1::dilate(){
 
 	IplImage* dst = cvCreateImage(cvSize(img->width, img->height), img->depth, img->nChannels);
-
 	cvDilate( img, dst, NULL, 4);
-
-//deallocate old img?
+	cvReleaseImage(&img);
 	img = dst;
 }
 
@@ -421,7 +565,6 @@ void vision1::saveData(const std::string& pName) {
    const char* fileName = pName.c_str();
    output = fopen(fileName,"w");
 
-   double a = 5.5;
    fprintf(output,"Area:%f ",ball_area);
    fprintf(output,"\n");
    fprintf(output,"X:%f ",ball_centroid_x);

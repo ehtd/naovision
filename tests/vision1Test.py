@@ -25,11 +25,15 @@ else:
   from naoqi import ALBehavior
   from vision_definitions import*
 
-IP = "192.168.1.106"
+for arg in sys.argv:
+	print arg
+	IP = arg
+
 PORT = 9559
 
-imgPathOriginal="/home/nao/fotos/original"
-imgPathProcessed="/home/nao/fotos/processed"
+
+imgPathOriginal="/home/ehtd/fotos/original"
+imgPathProcessed="/home/ehtd/fotos/processed"
 
 #________________________________
 # Generic Proxy creation 
@@ -49,21 +53,16 @@ except Exception,e:
 #vision1_Proxy.registerToVIM(kQQVGA, kRGBColorSpace)
 
 #print "takePicture"
-#vision1_Proxy.takePicture(imgPathOriginal)
+vision1_Proxy.takePicture(imgPathOriginal)
 
 
 print "Stiffness On"
 vision1_Proxy.stiffnessOn()
 
-i=0
-
-while 1:
-
-	print "Processing Image"
-	vision1_Proxy.processBall(imgPathProcessed)
+print "Processing Image"
+vision1_Proxy.processBall(imgPathProcessed)
 
 #vision1_Proxy.saveData("/home/nao/fotos/dump.txt")
-
 
 print "Stiffness Off"
 vision1_Proxy.stiffnessOff()
