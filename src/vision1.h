@@ -109,9 +109,9 @@ public:
 
     void segmentacion(IplImage*,vector<vector<int> >& );
 
-    void printLut(vector<vector<int> >, const std::string& );
+    void printLut(vector<vector<int> >& , const std::string& );
 
-    void makeConcistent(vector<vector<int> >, IplImage* );
+    void makeConcistent(vector<vector<int> >& , IplImage* );
 
 	//    void detectBall(IplImage* img1);
 	/**

@@ -32,8 +32,8 @@ for arg in sys.argv:
 PORT = 9559
 
 
-imgPathOriginal="/home/ehtd/fotos/original"
-imgPathProcessed="/home/ehtd/fotos/processed"
+imgPathOriginal="/home/nao/fotos/original"
+imgPathProcessed="/home/nao/fotos/processed"
 
 #________________________________
 # Generic Proxy creation 
