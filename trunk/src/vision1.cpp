@@ -304,7 +304,9 @@ void vision1::printImage(IplImage* imagen, const std::string& path){
 
 
 void vision1::releaseImage(){
+	if(img);
 	cvReleaseImage(&img);
+	fCamProxy->call<int>("releaseImage", fGvmName);
 }
 
 void vision1::takePicture(const std::string& path){
@@ -334,14 +336,20 @@ void vision1::processBall(const std::string& path){
 	fLogProxy->info(getName(), "Dilate");
 	dilate();
 	//fLogProxy->info(getName(), "printInText");
-	//printImage(pelota, "/home/ehtd/fotos/pelota.txt");
-	//printImage(porteria, "/home/ehtd/fotos/porteria.txt");
+	//printImage(pelota, "/home/nao/fotos/pelota.txt");
+	//printImage(porteria, "/home/nao/fotos/porteria.txt");
 	fLogProxy->info(getName(), "segmentacion");
 	segmentacion(pelota, lutPelota);
 	fLogProxy->info(getName(), "printInText");
-	printImage(pelota, "/home/ehtd/fotos/pelota.txt");
+	printImage(pelota, "/home/nao/fotos/pelota.txt");
 	fLogProxy->info(getName(), "LUT");
-	printLut(lutPelota,"/home/ehtd/fotos/lut.txt");
+	printLut(lutPelota,"/home/nao/fotos/lut.txt");
+	fLogProxy->info(getName(), "makeConcistent");
+	makeConcistent(lutPelota, pelota);
+	fLogProxy->info(getName(), "LUT");
+	printLut(lutPelota,"/home/nao/fotos/lut2.txt");
+	fLogProxy->info(getName(), "printInText");
+	printImage(pelota, "/home/nao/fotos/pelota2.txt");
 	fLogProxy->info(getName(), "getBallInfo");
 	getBallInfo();
 	//fLogProxy->info(getName(), "trackBall");
@@ -369,7 +377,7 @@ void vision1::binarizar(){
 		uchar* ptrPorteria = (uchar*) (porteria->imageData + y * porteria->widthStep);
 
 		for( int x=0; x<img->width; x++ ) {
-			if (ptr [3*x+0]< 50 and ptr [3*x+0]> 15 and ptr [3*x+1]> 90){
+			if (ptr [3*x+0]< 50 /*and ptr [3*x+0]> 15 */and ptr [3*x+1]> 90){
 
 				ptrPelota[x]=1;
 
@@ -402,6 +410,14 @@ void vision1::binarizar(){
 
 void vision1::segmentacion(IplImage* imagen, vector<vector<int> >& lut){
 	int c = 2;
+	FILE *output;
+	std::string path = "/home/nao/fotos/prueba.txt";
+   const char* fileName = path.c_str();
+   output = fopen(fileName,"w");
+   fprintf(output,"asdawsaf");
+   fprintf(output,"\n");
+   fclose(output);
+
 	for( int y=0; y<imagen->height; y++ ) {
 		uchar* ptr = (uchar*) (imagen->imageData + y * imagen->widthStep);
 		uchar* ptrOld = NULL;
@@ -478,24 +494,43 @@ void vision1::segmentacion(IplImage* imagen, vector<vector<int> >& lut){
 	}
 }
 
-void vision1::printLut(vector<vector<int> >lut,const std::string& path){
+void vision1::printLut(vector<vector<int> >& lut,const std::string& path){
 	FILE *output;
    const char* fileName = path.c_str();
    output = fopen(fileName,"w");
 
-	for (int i = 0; i < lut.size(); i++){
+	for (int i = 0; i < (int)lut.size(); i++){
 		vector<int> row = lut.at(i);
-		for (int j = 0; j<row.size(); j++){
+		for (int j = 0; j<(int)row.size(); j++){
 			int element = row.at(j);
 			fprintf(output,"%d, ",element);
 		}
 		fprintf(output,"\n");
 	}
+	   fclose(output);
 }
 
-void vision1::makeConcistent(vector<vector<int> >lut, IplImage* imagen){
+void vision1::makeConcistent(vector<vector<int> >& lut, IplImage* imagen){
 
+	while(!lut.empty()){
+		printf("loop");
+		vector<int> v = lut.back();
+		int val_to_change = v.back();
+		v.pop_back();
+		int val = v. back();
+		v.pop_back();
+		lut.pop_back();
 
+		for( int y=0; y<imagen->height; y++ ) {
+			uchar* ptr = (uchar*) (imagen->imageData + y * imagen->widthStep);
+			for( int x=0; x<imagen->width; x++ ) {
+				//reemplazar
+				if (ptr[x] == val_to_change){
+					ptr[x] = val;
+				}
+			}
+		}
+	}
 }
 
 double vision1::M(int p, int q, int id)
